@@ -4,7 +4,7 @@
 // first channel found is always used to compute alignment. TBD: select which channel to be used for alignment
 // TBD: add parameters to adjust for noise or calculate noise. Only if needed. Due to the SIFT algorithm this should not be needed.
 
-//UZ, Center for Microscopy -- Janaury 2021
+//UZH, Center for Microscopy -- January 2021
 
 print("\\Clear");
 start = getTime();
@@ -247,6 +247,8 @@ for (well = 0; well < wells.length; well++) {
 		}
 		//Save individual channels as images
 		run("Hyperstack to Stack");
+		Stack.getDimensions(width, height, nchannels, nslices, nframes);
+		run("Properties...", "channels="+(nchannels*nslices*nframes)+" slices=1 frames=1");
 		//waitForUser;
 		if (flagMissingChannel == 1) {
 			//remove empty channels used while aligning
