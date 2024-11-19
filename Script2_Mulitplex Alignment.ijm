@@ -4,7 +4,7 @@
 // first channel found is always used to compute alignment. TBD: select which channel to be used for alignment
 // TBD: add parameters to adjust for noise or calculate noise. Only if needed. Due to the SIFT algorithm this should not be needed.
 
-//UZH, Center for Microscopy -- January 2021
+//UZ, Center for Microscopy -- Janaury 2021
 
 print("\\Clear");
 start = getTime();
@@ -182,6 +182,7 @@ for (well = 0; well < wells.length; well++) {
 		run("Clear Results");
 		nameStack = parameterSample + "--W" + sRow +sCol + "--P" + sField;
 		print("\n\n"+nameStack);
+
 		//channels
 		nChannelSeriesCounter = 0;
 		t=0; 
@@ -233,6 +234,7 @@ for (well = 0; well < wells.length; well++) {
 		}
 		//save results to a text file
 		saveAs("Results", directoryOut + "\\" + nameStack + ".txt"); //generate a text file
+		
 		run("Stack From List...", "open=[" + directoryOut + "\\" + nameStack + ".txt" + "] use");
 		run("Stack to Hyperstack...", "order=xyczt(default) channels=" + maxChannels + " slices=" + inputDirs.length + " frames=1 display=Color");
 		if (indexOf(parameterSaving, "Yes")>=0) {
@@ -249,27 +251,33 @@ for (well = 0; well < wells.length; well++) {
 		run("Hyperstack to Stack");
 		Stack.getDimensions(width, height, nchannels, nslices, nframes);
 		run("Properties...", "channels="+(nchannels*nslices*nframes)+" slices=1 frames=1");
-		//waitForUser;
+		
+		//delete unnecessary channels
+		channelsToDelete = newArray(0);
+		//alignment channels
+		for (i = 1; i < inputDirs.length; i++) {
+			channelsToDelete = Array.concat(channelsToDelete, i*maxChannels);
+		}
+		//empty channels
 		if (flagMissingChannel == 1) {
-			//remove empty channels used while aligning
-			for (r = listChannels.length; r >0; r--) {
-				setSlice(r);
-				if (listChannels[r-1] == 0 ) {
-					//waitForUser;
-					run("Delete Slice", "delete=channel");
+			for (c = 0; c < listChannels.length; c++) {
+				if (listChannels[c] == 0 ) {
+					channelsToDelete = Array.concat(channelsToDelete, c);
 				}
-				//print(r);
 			}
 		}
+		Array.sort(channelsToDelete);
+		//delete channels
+		for (i = channelsToDelete.length-1; i >= 0; i--) {
+			c = channelsToDelete[i];
+			setSlice(c+1);
+			run("Delete Slice", "delete=channel");
+		}
+
 		//waitForUser;
 		if (indexOf(parameterSaving, "Yes")>=0) {
 			//save aligned hyperstack of channels
 			saveAs("tiff", directoryOut + "\\" + nameStack + "-" + parameterTransformation + "-flat.tif");
-		}
-		//delete alignment channels
-		for (i = inputDirs.length -1; i > 0; i--) {
-			setSlice(i*maxChannels + 1 );
-			run("Delete Slice");
 		}
 		n = nSlices; 
 		run("Stack to Images");
@@ -281,12 +289,13 @@ for (well = 0; well < wells.length; well++) {
 			sTime = toString(1); while (sTime.length() < 5) {sTime = "0" + sTime;}
 			saveAs("tiff", directoryOut + "\\" + nameStack + "--Z00000--T" + sTime + "--" + sChannel + ".tif");
 			close();
+			//waitForUser;
 		}
 	}
 }
 
 run("Clear Results");
-x=File.delete(directoryOut+ "\\helperChannel\\emptyChannel.tif");
+x=File.delete(directoryOut+ "\\" + "helperChannel\\emptyChannel.tif");
 x=File.delete(directoryOut+ "\\helperChannel");
 print("\n------------------------Finished in " + (getTime() - start) / 1000 + " s ------------------------");
 
